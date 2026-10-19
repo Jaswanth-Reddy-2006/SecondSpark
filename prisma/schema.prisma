@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// NextAuth / Auth.js Models
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String?                @unique
+  emailVerified         DateTime?
+  passwordHash          String?
+  image                 String?
+  xp                    Int                    @default(0)
+  level                 Int                    @default(1)
+  accounts              Account[]
+  sessions              Session[]
+  projects              Project[]
+  memberships           ProjectMembership[]
+  ratings               ProjectRating[]
+  suggestions           Suggestion[]
+  votes                 SuggestionVote[]
+  comments              Comment[]
+  collaborationRequests CollaborationRequest[]
+  assignedTasks         ProjectTask[]
+  experienceLedger      ExperienceLedger[]
+  achievements          UserAchievement[]
+  notifications         Notification[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// SecondSpark Project Models
+model Project {
+  id                    String                 @id @default(cuid())
+  userId                String
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug                  String?                @unique
+  name                  String
+  tagline               String
+  description           String
+  originalProblem       String                 @default("")
+  intendedUsers         String                 @default("")
+  techTags              String                 // JSON stringified array of tags
+  repoUrl               String?
+  demoUrl               String?
+  status                String                 @default("Abandoned") // Abandoned | Under Review | Revived | Archived
+  lastActiveDate        String
+  worthRevisiting       Boolean                @default(true)
+  completionRate        Int                    @default(70)
+  abandonedReason       String                 @default("")
+  completedFeatures     String                 // JSON stringified array
+  unfinishedFeatures    String                 // JSON stringified array
+  mainBlockers          String                 @default("")
+  lessonsLearned        String                 @default("")
+  revivalPotential      String                 @default("Moderate")
+  stars                 Int                    @default(0)
+  
+  // Community & Collaboration Extensions
+  isPublic              Boolean                @default(false)
+  collaborationStatus   String                 @default("feedback_only") // feedback_only | open_to_collaborators | invitation_only | open_to_adoption | closed
+  skillsNeeded          String                 @default("[]") // JSON stringified array of skill tags
+  ratingsCount          Int                    @default(0)
+  ratingAverage         Float                  @default(0.0)
+
+  // Developer Tooling & Ecosystem Extensions
+  autopsyData           String?                // JSON stringified ProjectAutopsy
+  autopsyRunAt          DateTime?
+  harvestGems           String                 @default("[]") // JSON stringified HarvestGem array
+  adoptionProtocol      String?                // JSON stringified AdoptionProtocol
+  founderEmeritus       String?                // JSON stringified FounderEmeritus info
+
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  timeline              ProjectTimelineEvent[]
+  memberships           ProjectMembership[]
+  ratings               ProjectRating[]
+  suggestions           Suggestion[]
+  collaborationRequests CollaborationRequest[]
+  tasks                 ProjectTask[]
+
+  @@index([userId])
+  @@index([isPublic, status])
+}
+
+model ProjectTimelineEvent {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  type        String   @default("update") // created | status_change | edit
+  timestamp   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// Community: Project Membership / Collaborator Roles
+model ProjectMembership {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("CONTRIBUTOR") // OWNER | MAINTAINER | CONTRIBUTOR | REVIEWER
+  joinedAt  DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// Community: 5-Dimension Structured Reviews
+model ProjectRating {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clarity       Int      @default(3) // 1-5
+  documentation Int      @default(3) // 1-5
+  potential     Int      @default(3) // 1-5
+  onboarding    Int      @default(3) // 1-5
+  reusability   Int      @default(3) // 1-5
+  feedback      String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+// Community: Actionable Suggestions & Architecture Improvements
+model Suggestion {
+  id              String           @id @default(cuid())
+  projectId       String
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId        String
+  author          User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  category        String           @default("architecture") // architecture | feature | tech_debt | business_model | security | refactor
+  expectedImpact  String           @default("medium") // high | medium | low
+  estimatedEffort String           @default("medium") // high | medium | low
+  status          String           @default("open") // open | accepted | planned | completed | rejected
+  upvotesCount    Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  votes           SuggestionVote[]
+  comments        Comment[]
+
+  @@index([projectId])
+  @@index([authorId])
+}
+
+// Community: Suggestion Upvotes (1 per user per suggestion)
+model SuggestionVote {
+  id           String     @id @default(cuid())
+  suggestionId String
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([suggestionId, userId])
+  @@index([userId])
+  @@index([suggestionId])
+}
+
+// Community: Suggestion Discussion Thread
+model Comment {
+  id           String     @id @default(cuid())
+  suggestionId String
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content      String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([suggestionId])
+  @@index([authorId])
+}
+
+// Community: Collaboration & Adoption Applications
+model CollaborationRequest {
+  id                   String   @id @default(cuid())
+  projectId            String
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  applicantId          String
+  applicant            User     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  motivation           String
+  skills               String   // JSON stringified array of skills
+  proposedContribution String
+  status               String   @default("pending") // pending | accepted | declined | withdrawn
+  responseNote         String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([applicantId])
+}
+
+// Community: Revival Task Board
+model ProjectTask {
+  id             String    @id @default(cuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  description    String    @default("")
+  type           String    @default("feature") // bug | feature | documentation | test | chore
+  priority       String    @default("medium") // critical | high | medium | low
+  status         String    @default("open") // open | in_progress | review | completed
+  requiredSkills String    @default("[]") // JSON stringified array
+  assigneeId     String?
+  assignee       User?     @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  githubIssueUrl String?
+  githubPrUrl    String?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([assigneeId])
+}
+
+// Gamification: XP & Contribution Ledger
+model ExperienceLedger {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points      Int
+  action      String   // submit_review | propose_suggestion | vote_suggestion | complete_task | project_revived | join_team
+  sourceId    String?  // ID of associated resource to enforce idempotency
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([userId, sourceId])
+  @@index([userId])
+}
+
+// Gamification: Badges & Achievements
+model UserAchievement {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId    String   // e.g. first_spark, necromancer, master_architect, guardian
+  unlockedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+// User Notifications
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  link      String?
+  type      String   @default("info") // info | suggestion | review | invite | task | achievement
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}

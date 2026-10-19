@@ -1,26 +1,106 @@
 @import "tailwindcss";
 
 :root {
+  /* GitHub-Inspired Primer Light Palette */
   --background: #ffffff;
-  --foreground: #171717;
+  --background-subtle: #f6f8fa;
+  --foreground: #1f2328;
+  --foreground-muted: #59636e;
+  --border: #d1d9e0;
+  --border-subtle: #ebeff3;
+
+  /* Primary Action: GitHub Action Green */
+  --primary: #1f883d;
+  --primary-hover: #1a7f37;
+  --primary-active: #156c2e;
+  --primary-foreground: #ffffff;
+
+  /* GitHub Link & Information Blue */
+  --link: #0969da;
+  --link-hover: #0550ae;
+  --surface-blue: #ddf4ff;
+  --border-blue: #54aeff;
+
+  /* Semantic Status Surfaces */
+  --surface-success: #dafbe1;
+  --text-success: #1a7f37;
+  --border-success: #4ac26b;
+
+  --surface-warning: #fff8c5;
+  --text-warning: #9a6700;
+  --border-warning: #d4a72c;
+
+  --surface-danger: #ffebe9;
+  --text-danger: #d1242f;
+  --border-danger: #ff8182;
+
+  /* Cards & Containers */
+  --card: #ffffff;
+  --card-foreground: #1f2328;
+  --card-border: #d1d9e0;
+
+  /* Focus Ring */
+  --focus-ring: rgba(9, 105, 218, 0.3);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Monospace code font stack matching GitHub Primer */
+code, kbd, samp, pre, .font-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* GitHub-styled clean scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f6f8fa;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d9e0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #afb8c1;
+}
+
+/* Focus styles matching GitHub Primer */
+.primer-focus-ring:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.primer-focus-blue:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Suppress dev indicator overlays and toasts for clean UI presentation */
+nextjs-portal,
+[data-nextjs-toast],
+#__next-build-watcher,
+div[data-nextjs-dialog-overlay] {
+  display: none !important;
 }
